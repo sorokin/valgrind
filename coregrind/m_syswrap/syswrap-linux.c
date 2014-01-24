@@ -5467,9 +5467,16 @@ PRE(sys_ioctl)
 {
    *flags |= SfMayBlock;
 
+    // sys_ioctl is declared as
+    //
+    //    long sys_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg);
+    //
+    // but registers of CPU are unsigned long, so discard most significant bits as kernel do
+    unsigned int cmd = (unsigned int)ARG2;
+
    // We first handle the ones that don't use ARG3 (even as a
    // scalar/non-pointer argument).
-   switch (ARG2 /* request */) {
+   switch (cmd) {
 
       /* asm-generic/ioctls.h */
    case VKI_FIOCLEX:
@@ -5622,7 +5629,7 @@ PRE(sys_ioctl)
    // We now handle those that do look at ARG3 (and unknown ones fall into
    // this category).  Nb: some of these may well belong in the
    // doesn't-use-ARG3 switch above.
-   switch (ARG2 /* request */) {
+   switch (cmd) {
    case VKI_TCSETS:
    case VKI_TCSETSW:
    case VKI_TCSETSF:
@@ -6934,7 +6941,7 @@ PRE(sys_ioctl)
 
    default:
       /* EVIOC* are variable length and return size written on success */
-      switch (ARG2 & ~(_VKI_IOC_SIZEMASK << _VKI_IOC_SIZESHIFT)) {
+      switch (cmd & ~(_VKI_IOC_SIZEMASK << _VKI_IOC_SIZESHIFT)) {
       case VKI_EVIOCGNAME(0):
       case VKI_EVIOCGPHYS(0):
       case VKI_EVIOCGUNIQ(0):
@@ -6954,7 +6961,7 @@ PRE(sys_ioctl)
       case VKI_EVIOCGBIT(VKI_EV_FF,0):
       case VKI_EVIOCGBIT(VKI_EV_PWR,0):
       case VKI_EVIOCGBIT(VKI_EV_FF_STATUS,0):
-         PRE_MEM_WRITE("ioctl(EVIO*)", ARG3, _VKI_IOC_SIZE(ARG2));
+         PRE_MEM_WRITE("ioctl(EVIO*)", ARG3, _VKI_IOC_SIZE(cmd));
          break;
       default:
          ML_(PRE_unknown_ioctl)(tid, ARG2, ARG3);
@@ -6968,6 +6975,8 @@ POST(sys_ioctl)
 {
    vg_assert(SUCCESS);
 
+   unsigned int cmd = (unsigned int)ARG2;
+
    /* --- BEGIN special IOCTL handlers for specific Android hardware --- */
 
 #  if defined(VGPV_arm_linux_android) || defined(VGPV_x86_linux_android) \
@@ -6977,7 +6986,7 @@ POST(sys_ioctl)
 
    /* BEGIN undocumented ioctls for the graphics hardware (??)
       (libpvr) on Nexus S */
-   if (ARG2 >= 0xC01C6700 && ARG2 <= 0xC01C67FF && ARG3 >= 0x1000) {
+   if (cmd >= 0xC01C6700 && cmd <= 0xC01C67FF && ARG3 >= 0x1000) {
       /* What's going on here: there appear to be a bunch of ioctls of
          the form 0xC01C67xx which are undocumented, and if unhandled
          give rise to a vast number of false positives in Memcheck.
@@ -7062,7 +7071,7 @@ POST(sys_ioctl)
    /* --- END special IOCTL handlers for specific Android hardware --- */
 
    /* --- normal handling --- */
-   switch (ARG2 /* request */) {
+   switch (cmd) {
    case VKI_TCSETS:
    case VKI_TCSETSW:
    case VKI_TCSETSF:
@@ -7992,7 +8001,7 @@ POST(sys_ioctl)
 
    default:
       /* EVIOC* are variable length and return size written on success */
-      switch (ARG2 & ~(_VKI_IOC_SIZEMASK << _VKI_IOC_SIZESHIFT)) {
+      switch (cmd & ~(_VKI_IOC_SIZEMASK << _VKI_IOC_SIZESHIFT)) {
       case VKI_EVIOCGNAME(0):
       case VKI_EVIOCGPHYS(0):
       case VKI_EVIOCGUNIQ(0):
