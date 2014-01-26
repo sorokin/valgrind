@@ -5630,6 +5630,41 @@ PRE(sys_ioctl)
    // this category).  Nb: some of these may well belong in the
    // doesn't-use-ARG3 switch above.
    switch (cmd) {
+   case VKI_SNDRV_CTL_IOCTL_PVERSION: {
+       PRE_MEM_WRITE( "ioctl(SNDRV_CTL_IOCTL_PVERSION)", (Addr)ARG3, sizeof(int) );
+       break;
+   }
+   case VKI_SNDRV_CTL_IOCTL_CARD_INFO: {
+       PRE_MEM_WRITE( "ioctl(SNDRV_CTL_IOCTL_CARD_INFO)", (Addr)ARG3, sizeof(struct vki_snd_ctl_card_info) );
+       break;
+   }
+   case VKI_SNDRV_CTL_IOCTL_ELEM_LIST: {
+       struct vki_snd_ctl_elem_list *data = (struct vki_snd_ctl_elem_list *)ARG3;
+       PRE_MEM_READ( "ioctl(SNDRV_CTL_IOCTL_ELEM_LIST)", (Addr)&data->offset, sizeof(data->offset) );
+       PRE_MEM_READ( "ioctl(SNDRV_CTL_IOCTL_ELEM_LIST)", (Addr)&data->space, sizeof(data->space) );
+       PRE_MEM_WRITE( "ioctl(SNDRV_CTL_IOCTL_ELEM_LIST)", (Addr)&data->used, sizeof(data->used) );
+       PRE_MEM_WRITE( "ioctl(SNDRV_CTL_IOCTL_ELEM_LIST)", (Addr)&data->count, sizeof(data->count) );
+       PRE_MEM_READ( "ioctl(SNDRV_CTL_IOCTL_ELEM_LIST)", (Addr)&data->pids, sizeof(data->pids) );
+       if (data->pids) {
+           PRE_MEM_WRITE( "ioctl(SNDRV_CTL_IOCTL_ELEM_LIST)", (Addr)data->pids, sizeof(struct vki_snd_ctl_elem_id) * data->space );
+       }
+       break;
+   }
+   case VKI_SNDRV_CTL_IOCTL_TLV_READ: {
+       struct vki_snd_ctl_tlv *data = (struct vki_snd_ctl_tlv *)ARG3;
+       PRE_MEM_READ( "ioctl(SNDRV_CTL_IOCTL_TLV_READ)", (Addr)&data->numid, sizeof(data->numid) );
+       PRE_MEM_READ( "ioctl(SNDRV_CTL_IOCTL_TLV_READ)", (Addr)&data->length, sizeof(data->length) );
+       PRE_MEM_WRITE( "ioctl(SNDRV_CTL_IOCTL_TLV_READ)", (Addr)data->tlv, data->length );
+       break;
+   }
+   case VKI_SNDRV_CTL_IOCTL_TLV_WRITE:
+   case VKI_SNDRV_CTL_IOCTL_TLV_COMMAND: {
+       struct vki_snd_ctl_tlv *data = (struct vki_snd_ctl_tlv *)ARG3;
+       PRE_MEM_READ( "ioctl(SNDRV_CTL_IOCTL_TLV_WRITE)", (Addr)&data->numid, sizeof(data->numid) );
+       PRE_MEM_READ( "ioctl(SNDRV_CTL_IOCTL_TLV_WRITE)", (Addr)&data->length, sizeof(data->length) );
+       PRE_MEM_READ( "ioctl(SNDRV_CTL_IOCTL_TLV_WRITE)", (Addr)data->tlv, data->length );
+       break;
+   }
    case VKI_TCSETS:
    case VKI_TCSETSW:
    case VKI_TCSETSF:
@@ -7072,6 +7107,30 @@ POST(sys_ioctl)
 
    /* --- normal handling --- */
    switch (cmd) {
+   case VKI_SNDRV_CTL_IOCTL_PVERSION: {
+       POST_MEM_WRITE( (Addr)ARG3, sizeof(int) );
+       break;
+   }
+   case VKI_SNDRV_CTL_IOCTL_CARD_INFO: {
+       POST_MEM_WRITE( (Addr)ARG3, sizeof(struct vki_snd_ctl_card_info) );
+       break;
+   }
+   case VKI_SNDRV_CTL_IOCTL_ELEM_LIST: {
+       struct vki_snd_ctl_elem_list *data = (struct vki_snd_ctl_elem_list *)ARG3;
+       POST_MEM_WRITE( (Addr)&data->used, sizeof(data->used) );
+       if (data->pids) {
+           POST_MEM_WRITE( (Addr)data->pids, sizeof(struct vki_snd_ctl_elem_id) * data->used );
+       }
+       break;
+   }
+   case VKI_SNDRV_CTL_IOCTL_TLV_READ: {
+      struct vki_snd_ctl_tlv *data = (struct vki_snd_ctl_tlv *)ARG3;
+      POST_MEM_WRITE( (Addr)data->tlv, data->length );
+      break;
+   }
+   case VKI_SNDRV_CTL_IOCTL_TLV_WRITE:
+   case VKI_SNDRV_CTL_IOCTL_TLV_COMMAND:
+      break;
    case VKI_TCSETS:
    case VKI_TCSETSW:
    case VKI_TCSETSF:
